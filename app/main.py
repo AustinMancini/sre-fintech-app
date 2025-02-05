@@ -1,16 +1,26 @@
 from fastapi import FastAPI
-from dotenv import load_dotenv
-import os
+from contextlib import asynccontextmanager
+import logging
+from .database.db import Base, engine
+from app.database import models
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# @app.get("/")
-# async def root():
-#     return {"message": "Hello world"}
+def create_db_and_tables():
+    try:
+        models.Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating the database tables {e}")
+        raise
 
-# @app.get("/items/{item_id}")
-# async def read_item(item_id: int):
-#     return {"item_id": item_id}
+# Create DB and tables on startup
+def startup_event():
+    logger.info("Starting up...")
+    create_db_and_tables()
+    
+app = FastAPI(on_startup=[startup_event])
 
 @app.get("/")
 def home():
