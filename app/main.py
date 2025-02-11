@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import logging
-from .database.db import Base, engine
+from .database.db import Base, engine, get_session
 from app.database import models
 
 logging.basicConfig(level=logging.INFO)
@@ -15,12 +15,15 @@ def create_db_and_tables():
         logger.error(f"Error creating the database tables {e}")
         raise
 
-# Create DB and tables on startup
-def startup_event():
-    logger.info("Starting up...")
+# Make sure DB is created before starting app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting table creation..")
     create_db_and_tables()
-    
-app = FastAPI(on_startup=[startup_event])
+    yield
+
+logger.info("App started..")
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 def home():
